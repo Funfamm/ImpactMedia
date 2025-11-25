@@ -8,4 +8,5 @@
   "SMTP_PASS": "password",
   "ADMIN_EMAIL": "ai.impactmediastudio@gmail.com",
   "SENDER_NAME": "AI Impact Media Studio Admin"
+  "UPLOADS_ROOT": "../uploads"
 }
