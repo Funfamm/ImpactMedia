@@ -3,7 +3,7 @@ const { getAuth } = require('./googleClient');
 const stream = require('stream');
 
 const drive = google.drive({ version: 'v3', auth: getAuth() });
-const MAIN_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+const MAIN_FOLDER_ID = process.env.1WPiJUYGJ__jgW_6vBWfyF3vsIJpIuLJ_;
 
 /**
  * Creates a subfolder inside the main Drive folder
