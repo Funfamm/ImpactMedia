@@ -1,18 +1,14 @@
 /**
- * Node/Express backend for AI Impact Media Studio
- * Migrated from Google Apps Script (Code.gs).
- * Recreates:
+ * AI Impact Media Studio backend
  * - processCastingSubmission
  * - processSponsorInquiry
- * - trackAnalyticsEvent / getQuickStats
+ * - trackAnalyticsEvent (SQLite)
+ * - getQuickStats (SQLite)
  * - getServerConfig
  * - testConnection
  *
- * Storage:
- * - Files: local ./storage/uploads
- * - Analytics: local ./storage/analytics.json
- *
- * Email: nodemailer (configure SMTP via config.json or environment variables).
+ * Files: local uploads folder (see UPLOADS_ROOT)
+ * Analytics: SQLite db/analytics.db (table: analytics_events)
  */
 
 const fs = require('fs');
@@ -21,9 +17,10 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const nodemailer = require('nodemailer');
+const sqlite3 = require('sqlite3').verbose();
 const { v4: uuidv4 } = require('uuid');
 
-// ---------- CONFIGURATION ----------
+// ---------- CONFIG ----------
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 let LOCAL_CONFIG = {};
 if (fs.existsSync(CONFIG_FILE)) {
@@ -39,19 +36,36 @@ const RECIPIENT_EMAIL =
 const SENDER_NAME =
   process.env.SENDER_NAME || LOCAL_CONFIG.SENDER_NAME || 'AI Impact Media Studio Admin';
 
-// Storage paths (local FS instead of Google Drive)
-const STORAGE_ROOT = path.join(__dirname, 'storage');
-const UPLOADS_ROOT = path.join(STORAGE_ROOT, 'uploads');
-const ANALYTICS_FILE = path.join(STORAGE_ROOT, 'analytics.json');
+const UPLOADS_ROOT = path.resolve(
+  __dirname,
+  process.env.UPLOADS_ROOT || LOCAL_CONFIG.UPLOADS_ROOT || '../uploads'
+);
+if (!fs.existsSync(UPLOADS_ROOT)) fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
 
-// Ensure storage directories/files exist
-if (!fs.existsSync(STORAGE_ROOT)) fs.mkdirSync(STORAGE_ROOT);
-if (!fs.existsSync(UPLOADS_ROOT)) fs.mkdirSync(UPLOADS_ROOT);
-if (!fs.existsSync(ANALYTICS_FILE)) {
-  fs.writeFileSync(ANALYTICS_FILE, JSON.stringify([]));
-}
+// Analytics DB
+const DB_DIR = path.join(__dirname, 'db');
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR);
+const DB_PATH = path.join(DB_DIR, 'analytics.db');
+const db = new sqlite3.Database(DB_PATH);
 
-// ---- Original GAS constants / configuration ----
+// Create table equivalent to GAS sheet
+db.serialize(() => {
+  db.run(
+    `CREATE TABLE IF NOT EXISTS analytics_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT NOT NULL,
+      category TEXT,
+      action TEXT,
+      label TEXT,
+      userAgent TEXT,
+      page TEXT,
+      sessionId TEXT,
+      ipAddress TEXT
+    )`
+  );
+});
+
+// Original config equivalents
 const ALLOWED_AUDIO_TYPES = [
   'audio/mpeg',
   'audio/mp3',
@@ -68,10 +82,10 @@ const SERVER_CONFIG = {
   cacheTimeout: 600
 };
 
-// Simple in-memory cache/session substitute for GAS CacheService/Session
+// Session cache (replacement for GAS CacheService)
 const sessionCache = new Map();
 
-// ---------- EMAIL TRANSPORT (Nodemailer) ----------
+// ---------- EMAIL ----------
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || LOCAL_CONFIG.SMTP_HOST || 'smtp.example.com',
   port: Number(process.env.SMTP_PORT || LOCAL_CONFIG.SMTP_PORT || 587),
@@ -82,11 +96,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// TODO: In production, verify transporter configuration with transporter.verify()
-
-// ---------- EXPRESS APP SETUP ----------
+// ---------- EXPRESS ----------
 const app = express();
-app.use(express.json({ limit: '25mb' })); // support base64 file payloads
+app.use(express.json({ limit: '25mb' }));
 app.use(morgan('dev'));
 app.use(
   cors({
@@ -95,25 +107,24 @@ app.use(
   })
 );
 
-// ---------- UTILITY FUNCTIONS (GAS equivalents) ----------
+// Serve uploads if you want to expose them
+app.use('/uploads', express.static(UPLOADS_ROOT));
 
+// ---------- UTILITIES ----------
 function getSessionId(userAgent) {
   const uaKey = (userAgent || 'unknown').substring(0, 50);
   const hour = new Date().getHours();
-  const cacheKey = `session_${uaKey}_${hour}`;
-  if (sessionCache.has(cacheKey)) {
-    return sessionCache.get(cacheKey);
-  }
-  const sessionId = uuidv4();
-  // Cache for 1 hour (in-memory only)
-  sessionCache.set(cacheKey, sessionId);
-  setTimeout(() => sessionCache.delete(cacheKey), 3600 * 1000);
-  return sessionId;
+  const key = `session_${uaKey}_${hour}`;
+  if (sessionCache.has(key)) return sessionCache.get(key);
+  const id = uuidv4();
+  sessionCache.set(key, id);
+  setTimeout(() => sessionCache.delete(key), 3600 * 1000);
+  return id;
 }
 
 function getClientIP(req) {
   return (
-    req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+    (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
     req.socket?.remoteAddress ||
     'unknown'
   );
@@ -137,145 +148,106 @@ function validateAudioFile(fileObj) {
   if (!fileObj || !fileObj.mimeType) {
     throw new Error('Invalid audio file: No MIME type detected');
   }
-
   const mime = fileObj.mimeType.toLowerCase();
   if (!ALLOWED_AUDIO_TYPES.includes(mime)) {
     throw new Error(
       `Invalid audio format. Only MP3 files are allowed. Detected: ${fileObj.mimeType}`
     );
   }
-
   if (fileObj.name && !fileObj.name.toLowerCase().endsWith('.mp3')) {
     throw new Error('Invalid file extension. Only .mp3 files are allowed.');
   }
-
-  if (fileObj.data && Buffer.byteLength(fileObj.data, 'base64') > SERVER_CONFIG.maxAudioSize) {
+  if (fileObj.data && Buffer.byteLength(fileObj.data.split(',').pop(), 'base64') > SERVER_CONFIG.maxAudioSize) {
     throw new Error('Audio file too large. Maximum size is 10MB.');
   }
-
   return true;
 }
 
 function validateImageFiles(images) {
   if (!images || images.length === 0) return true;
-
   if (images.length > SERVER_CONFIG.maxImages) {
     throw new Error(`Too many images. Maximum ${SERVER_CONFIG.maxImages} allowed.`);
   }
-
-  images.forEach((img, index) => {
+  images.forEach((img, i) => {
     if (!img.mimeType || !img.mimeType.startsWith('image/')) {
-      throw new Error(`File ${index + 1} is not a valid image.`);
+      throw new Error(`File ${i + 1} is not a valid image.`);
     }
-
-    if (img.data && Buffer.byteLength(img.data, 'base64') > SERVER_CONFIG.maxImageSize) {
-      throw new Error(
-        `Image ${index + 1} is too large. Maximum size is 5MB.`
-      );
+    if (img.data && Buffer.byteLength(img.data.split(',').pop(), 'base64') > SERVER_CONFIG.maxImageSize) {
+      throw new Error(`Image ${i + 1} is too large. Maximum size is 5MB.`);
     }
   });
-
   return true;
 }
 
-function saveBase64File(fileObj, targetFolder, filename) {
+function saveBase64File(fileObj, folderPath, filename) {
   if (!fileObj.data) {
     throw new Error('No file data provided');
   }
-
   let base64Data = fileObj.data;
-  if (base64Data.includes(',')) {
-    base64Data = base64Data.split(',')[1];
-  }
+  if (base64Data.includes(',')) base64Data = base64Data.split(',')[1];
   base64Data = base64Data.replace(/\s/g, '');
-
   if (!base64Data || base64Data.length < 100) {
     throw new Error('File data appears to be empty or too small');
   }
 
+  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
+
   const buffer = Buffer.from(base64Data, 'base64');
-  const filePath = path.join(targetFolder, filename);
+  const filePath = path.join(folderPath, filename);
   fs.writeFileSync(filePath, buffer);
 
-  // In GAS this sets description and metadata; here we can store a small sidecar .txt if desired.
-  const meta = `Submitted: ${new Date().toISOString()}\nOriginal: ${fileObj.name}\nType: ${fileObj.mimeType}\nSize: ${buffer.length} bytes\n`;
+  const meta = `Submitted: ${new Date().toISOString()}
+Original: ${fileObj.name}
+Type: ${fileObj.mimeType}
+Size: ${buffer.length} bytes
+`;
   fs.writeFileSync(filePath + '.meta.txt', meta);
 
-  // Return a pseudo URL (adjust when serving files statically or via CDN)
-  // TODO: Replace with real public URL if using cloud storage.
-  return {
-    path: filePath,
-    url: `/uploads/${encodeURIComponent(filename)}`
-  };
+  // TODO: replace url with cloud storage URL if you move off local FS
+  return { filePath, url: `/uploads/${encodeURIComponent(path.basename(folderPath))}/${encodeURIComponent(filename)}` };
 }
 
 function processFilesInNode(formData, subFolderName) {
-  const safeName = subFolderName.replace(/[^\w\s-]/g, '').substring(0, 200) || 'Applicant';
-  const folderPath = path.join(UPLOADS_ROOT, safeName);
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-
+  const safe = (subFolderName || 'Applicant')
+    .replace(/[^\w\s-]/g, '')
+    .substring(0, 200) || 'Applicant';
+  const folder = path.join(UPLOADS_ROOT, safe);
   const fileLinks = [];
 
-  // Images
   if (formData.images && formData.images.length > 0) {
-    formData.images.forEach((imgObj, index) => {
-      if (imgObj && imgObj.data) {
-        try {
-          const ext = getFileExtension(imgObj.mimeType) || 'jpg';
-          const filename = `Photo_${index + 1}.${ext}`;
-          const saved = saveBase64File(imgObj, folderPath, filename);
-          fileLinks.push(`Photo ${index + 1}: ${saved.url}`);
-        } catch (e) {
-          // Log and continue
-          console.error(`Failed to save image ${index}:`, e.toString());
-        }
+    formData.images.forEach((img, i) => {
+      if (!img || !img.data) return;
+      try {
+        const ext = getFileExtension(img.mimeType) || 'jpg';
+        const fname = `Photo_${i + 1}.${ext}`;
+        const saved = saveBase64File(img, folder, fname);
+        fileLinks.push(`Photo ${i + 1}: ${saved.url}`);
+      } catch (e) {
+        console.error('Image save failed', e);
       }
     });
   }
 
-  // Voice
   if (formData.voice && formData.voice.data) {
     try {
-      const filename = 'VoiceSample.mp3';
-      const saved = saveBase64File(formData.voice, folderPath, filename);
+      const fname = 'VoiceSample.mp3';
+      const saved = saveBase64File(formData.voice, folder, fname);
       fileLinks.push(`Voice Sample: ${saved.url}`);
     } catch (e) {
-      console.error('Failed to save audio:', e.toString());
+      console.error('Audio save failed', e);
     }
   }
 
   return fileLinks;
 }
 
-// In Apps Script, this prefers Cloud Functions and falls back locally.
-// Here we just call the local implementation.
-// TODO: Plug in cloud storage / worker if needed.
-function processFilesWithCloudEquivalent(formData, subFolderName) {
-  return processFilesInNode(formData, subFolderName);
-}
-
-// ---------- ANALYTICS STORAGE HELPERS ----------
-
-function readAnalytics() {
-  const raw = fs.readFileSync(ANALYTICS_FILE, 'utf8');
-  try {
-    return JSON.parse(raw) || [];
-  } catch {
-    return [];
-  }
-}
-
-function writeAnalytics(rows) {
-  fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(rows, null, 2));
-}
-
-function countByCategoryOptimized(data, category, action, label = '') {
+function countByCategory(rows, category, action, label = '') {
   let count = 0;
-  for (const row of data) {
+  for (const r of rows) {
     if (
-      row.category === category &&
-      row.action === action &&
-      (!label || row.label === label)
+      r.category === category &&
+      r.action === action &&
+      (!label || r.label === label)
     ) {
       count++;
     }
@@ -283,50 +255,10 @@ function countByCategoryOptimized(data, category, action, label = '') {
   return count;
 }
 
-function getQuickStatsLocal() {
-  const data = readAnalytics();
-  if (!data.length) {
-    return {
-      totalEvents: 0,
-      uniqueSessions: 0,
-      pageViews: 0,
-      donationClicks: 0,
-      formSubmissions: 0,
-      lastUpdated: new Date().toISOString()
-    };
-  }
-
-  const lastRows = data.slice(-100);
-  const totalEvents = lastRows.length;
-  const uniqueSessions = new Set(lastRows.map(r => r.sessionId)).size;
-  const pageViews = countByCategoryOptimized(lastRows, 'Navigation', 'Page View');
-  const donationClicks = countByCategoryOptimized(
-    lastRows,
-    'Donation',
-    'Button Click'
-  );
-  const formSubmissions = countByCategoryOptimized(
-    lastRows,
-    'Form',
-    'Submission Success'
-  );
-
-  return {
-    totalEvents,
-    uniqueSessions,
-    pageViews,
-    donationClicks,
-    formSubmissions,
-    lastUpdated: new Date().toISOString()
-  };
-}
-
-// ---------- EMAIL HELPERS (GAS MailApp equivalents) ----------
-
+// ---------- EMAIL HELPERS ----------
 async function sendSubmissionEmails(formObject, subFolderName, filesProcessed, fileLinks) {
   const adminSubject = `NEW CASTING SUBMISSION: ${formObject.name} (${formObject.social || 'No Handle'})`;
-  const fileListString = fileLinks.length > 0 ? fileLinks.join('\n') : 'No files uploaded';
-
+  const fileList = fileLinks.length ? fileLinks.join('\n') : 'No files uploaded';
   const adminBody =
     `A new casting submission has been received.\n\n` +
     `Applicant: ${formObject.name}\n` +
@@ -334,13 +266,12 @@ async function sendSubmissionEmails(formObject, subFolderName, filesProcessed, f
     `Social Handle: ${formObject.social || 'Not provided'}\n` +
     `Files Processed: ${filesProcessed}\n` +
     `Folder: ${subFolderName}\n\n` +
-    `Files:\n${fileListString}`;
+    `Files:\n${fileList}`;
 
   const userSubject = 'AI Impact Media Studio - Casting Submission Received';
   const userFileInfo = formObject.voice
     ? `We've received your ${filesProcessed} file(s) including your MP3 voice sample.`
     : `We've received your ${filesProcessed} file(s).`;
-
   const userBody =
     `Dear ${formObject.name},\n\n` +
     `Thank you for submitting your casting application to AI Impact Media Studio.\n\n` +
@@ -349,7 +280,6 @@ async function sendSubmissionEmails(formObject, subFolderName, filesProcessed, f
     `If your profile matches our upcoming AI-generated projects, our team will contact you via the email you provided.\n\n` +
     `Best regards,\nAI Impact Media Studio Team\n${RECIPIENT_EMAIL}`;
 
-  // Admin email
   await transporter.sendMail({
     from: `"${SENDER_NAME}" <${RECIPIENT_EMAIL}>`,
     to: RECIPIENT_EMAIL,
@@ -357,7 +287,6 @@ async function sendSubmissionEmails(formObject, subFolderName, filesProcessed, f
     text: adminBody
   });
 
-  // User confirmation
   await transporter.sendMail({
     from: `"${SENDER_NAME}" <${RECIPIENT_EMAIL}>`,
     to: formObject.email,
@@ -366,61 +295,7 @@ async function sendSubmissionEmails(formObject, subFolderName, filesProcessed, f
   });
 }
 
-// ---------- CORE BUSINESS LOGIC (GAS parity) ----------
-
-async function processCastingSubmission(formObject) {
-  // Validation
-  const requiredFields = ['email', 'name', 'agree_voluntary', 'agree_usage', 'agree_data'];
-  for (const field of requiredFields) {
-    if (!formObject[field]) {
-      throw new Error(`Required field missing: ${field}`);
-    }
-  }
-
-  // Validate files
-  if (formObject.images && formObject.images.length > 0) {
-    validateImageFiles(formObject.images);
-  }
-  if (formObject.voice && formObject.voice.data) {
-    validateAudioFile(formObject.voice);
-  }
-
-  // Subfolder name
-  const timeStamp = new Date()
-    .toISOString()
-    .replace(/[:]/g, '-')
-    .replace(/\..+$/, '');
-  let subFolderName = formObject.social ? formObject.social : `Applicant_${formObject.name}`;
-  subFolderName = `${subFolderName}_${timeStamp}`;
-
-  // Files
-  const fileLinks = processFilesWithCloudEquivalent(formObject, subFolderName);
-  const filesProcessed = fileLinks.length;
-
-  // Emails (do not block errors)
-  try {
-    await sendSubmissionEmails(formObject, subFolderName, filesProcessed, fileLinks);
-  } catch (e) {
-    console.error('Email error (non-critical):', e.toString());
-  }
-
-  const message = formObject.voice
-    ? `SUCCESS: Your application with MP3 voice sample has been submitted! Processed ${filesProcessed} file(s). Confirmation sent to ${formObject.email}.`
-    : `SUCCESS: Your application has been submitted! Processed ${filesProcessed} file(s). Confirmation sent to ${formObject.email}.`;
-
-  return {
-    success: true,
-    message,
-    filesProcessed,
-    fileLinks
-  };
-}
-
-async function processSponsorInquiry(formData) {
-  if (!formData.contactEmail) {
-    throw new Error('Contact email is required.');
-  }
-
+async function sendSponsorEmail(formData) {
   const subject = `SPONSORSHIP INQUIRY: ${formData.company}`;
   const body =
     `New sponsorship inquiry received:\n\n` +
@@ -436,7 +311,47 @@ async function processSponsorInquiry(formData) {
     text: body,
     replyTo: formData.contactEmail
   });
+}
 
+// ---------- CORE LOGIC ----------
+async function processCastingSubmission(formObject) {
+  const required = ['email', 'name', 'agree_voluntary', 'agree_usage', 'agree_data'];
+  for (const f of required) {
+    if (!formObject[f]) throw new Error(`Required field missing: ${f}`);
+  }
+  if (formObject.images && formObject.images.length) {
+    validateImageFiles(formObject.images);
+  }
+  if (formObject.voice && formObject.voice.data) {
+    validateAudioFile(formObject.voice);
+  }
+
+  const ts = new Date()
+    .toISOString()
+    .replace(/[:]/g, '-')
+    .replace(/\..+$/, '');
+  let subFolder = formObject.social || `Applicant_${formObject.name}`;
+  subFolder = `${subFolder}_${ts}`;
+
+  const fileLinks = processFilesInNode(formObject, subFolder);
+  const filesProcessed = fileLinks.length;
+
+  try {
+    await sendSubmissionEmails(formObject, subFolder, filesProcessed, fileLinks);
+  } catch (e) {
+    console.error('Email error (non-critical):', e);
+  }
+
+  const msg = formObject.voice
+    ? `SUCCESS: Your application with MP3 voice sample has been submitted! Processed ${filesProcessed} file(s). Confirmation sent to ${formObject.email}.`
+    : `SUCCESS: Your application has been submitted! Processed ${filesProcessed} file(s). Confirmation sent to ${formObject.email}.`;
+
+  return { success: true, message: msg, filesProcessed, fileLinks };
+}
+
+async function processSponsorInquiry(formData) {
+  if (!formData.contactEmail) throw new Error('Contact email is required.');
+  await sendSponsorEmail(formData);
   return {
     success: true,
     message: "SUCCESS: Your sponsorship inquiry has been sent. We'll contact you shortly."
@@ -444,29 +359,68 @@ async function processSponsorInquiry(formData) {
 }
 
 function trackAnalyticsEvent(eventData, req) {
-  const rows = readAnalytics();
+  return new Promise((resolve, reject) => {
+    const timestamp = new Date().toISOString();
+    const userAgent = eventData.userAgent || req.headers['user-agent'] || 'unknown';
+    const page = eventData.page || '/';
+    const sessionId = getSessionId(userAgent);
+    const ipAddress = getClientIP(req);
 
-  const timestamp = new Date().toISOString();
-  const userAgent = eventData.userAgent || req.headers['user-agent'] || 'unknown';
-  const page = eventData.page || '/';
-  const sessionId = getSessionId(userAgent);
-  const ipAddress = getClientIP(req);
+    const stmt = db.prepare(
+      `INSERT INTO analytics_events
+        (timestamp, category, action, label, userAgent, page, sessionId, ipAddress)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    stmt.run(
+      timestamp,
+      eventData.category || '',
+      eventData.action || '',
+      eventData.label || '',
+      userAgent,
+      page,
+      sessionId,
+      ipAddress,
+      (err) => {
+        stmt.finalize();
+        if (err) return reject(err);
+        resolve({ success: true, message: 'Event tracked' });
+      }
+    );
+  });
+}
 
-  const row = {
-    timestamp,
-    category: eventData.category,
-    action: eventData.action,
-    label: eventData.label || '',
-    userAgent,
-    page,
-    sessionId,
-    ipAddress
-  };
-
-  rows.push(row);
-  writeAnalytics(rows);
-
-  return { success: true, message: 'Event tracked' };
+function getQuickStats() {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT * FROM analytics_events ORDER BY id DESC LIMIT 100`,
+      (err, rows) => {
+        if (err) return reject(err);
+        if (!rows || !rows.length) {
+          return resolve({
+            totalEvents: 0,
+            uniqueSessions: 0,
+            pageViews: 0,
+            donationClicks: 0,
+            formSubmissions: 0,
+            lastUpdated: new Date().toISOString()
+          });
+        }
+        const totalEvents = rows.length;
+        const uniqueSessions = new Set(rows.map((r) => r.sessionId)).size;
+        const pageViews = countByCategory(rows, 'Navigation', 'Page View');
+        const donationClicks = countByCategory(rows, 'Donation', 'Button Click');
+        const formSubmissions = countByCategory(rows, 'Form', 'Submission Success');
+        resolve({
+          totalEvents,
+          uniqueSessions,
+          pageViews,
+          donationClicks,
+          formSubmissions,
+          lastUpdated: new Date().toISOString()
+        });
+      }
+    );
+  });
 }
 
 function getServerConfig() {
@@ -476,7 +430,7 @@ function getServerConfig() {
     maxAudioSize: SERVER_CONFIG.maxAudioSize,
     maxImageSize: SERVER_CONFIG.maxImageSize,
     serverTime: new Date().toISOString(),
-    useCloudFunctions: false // no Cloud Functions in Node version
+    useCloudFunctions: false
   };
 }
 
@@ -484,49 +438,44 @@ function testConnection() {
   return `Server is connected! Current time: ${new Date().toISOString()}`;
 }
 
-// ---------- EXPRESS ROUTES (HTTP endpoints) ----------
+// ---------- ROUTES ----------
 
-// Health check / testConnection
 app.get('/api/testConnection', (req, res) => {
   res.json({ status: 'ok', message: testConnection() });
 });
 
-// Casting submission
 app.post('/api/processCastingSubmission', async (req, res) => {
   try {
-    const formObject = req.body || {};
-    const result = await processCastingSubmission(formObject);
+    const result = await processCastingSubmission(req.body || {});
     res.json(result);
-  } catch (err) {
-    console.error('Submission error:', err.toString());
+  } catch (e) {
+    console.error('Casting error', e);
     res.status(400).json({
       success: false,
-      message: `Submission failed: ${err.message || 'Unknown error'}`
+      message: `Submission failed: ${e.message || 'Unknown error'}`
     });
   }
 });
 
-// Sponsor inquiry
 app.post('/api/processSponsorInquiry', async (req, res) => {
   try {
     const result = await processSponsorInquiry(req.body || {});
     res.json(result);
-  } catch (err) {
-    console.error('Sponsor inquiry error:', err.toString());
+  } catch (e) {
+    console.error('Sponsor error', e);
     res.status(400).json({
       success: false,
-      message: `Failed to send inquiry: ${err.message || 'Unknown error'}`
+      message: `Failed to send inquiry: ${e.message || 'Unknown error'}`
     });
   }
 });
 
-// Analytics: track event
-app.post('/api/trackAnalyticsEvent', (req, res) => {
+app.post('/api/trackAnalyticsEvent', async (req, res) => {
   try {
-    const result = trackAnalyticsEvent(req.body || {}, req);
+    const result = await trackAnalyticsEvent(req.body || {}, req);
     res.json(result);
-  } catch (err) {
-    console.error('Analytics error:', err.toString());
+  } catch (e) {
+    console.error('Analytics error', e);
     res.status(500).json({
       success: false,
       message: 'Analytics tracking failed'
@@ -534,26 +483,38 @@ app.post('/api/trackAnalyticsEvent', (req, res) => {
   }
 });
 
-// Analytics: quick stats
-app.get('/api/getQuickStats', (req, res) => {
+app.get('/api/getQuickStats', async (req, res) => {
   try {
-    const stats = getQuickStatsLocal();
+    const stats = await getQuickStats();
     res.json(stats);
-  } catch (err) {
-    console.error('Quick stats error:', err.toString());
+  } catch (e) {
+    console.error('Stats error', e);
     res.status(500).json({ error: 'Failed to compute stats' });
   }
 });
 
-// Server config
 app.get('/api/getServerConfig', (req, res) => {
   res.json(getServerConfig());
 });
 
-// Static serving of uploaded files (optional; restrict in production)
-app.use('/uploads', express.static(UPLOADS_ROOT));
+// Optional: donation tracking hook if you want to mirror trackDonation()
+app.post('/api/trackDonation', async (req, res) => {
+  try {
+    await trackAnalyticsEvent(
+      {
+        category: 'Donation',
+        action: 'Recorded',
+        label: req.body.label || ''
+      },
+      req
+    );
+    res.json({ success: true, message: 'Donation recorded' });
+  } catch (e) {
+    console.error('Donation tracking error', e);
+    res.status(500).json({ success: false, message: 'Error tracking donation' });
+  }
+});
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`AI Impact Media backend listening on port ${PORT}`);
+  console.log(`AI Impact Media backend (SQLite) listening on port ${PORT}`);
 });
