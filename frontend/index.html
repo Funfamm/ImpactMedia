@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Impact Media Studio – Casting & Sponsorship</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- No redirects; loads directly on GitHub Pages -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1 class="logo">AI Impact Media Studio</h1>
+      <nav class="nav">
+        <button class="nav-link" data-section="casting">Casting Application</button>
+        <button class="nav-link" data-section="sponsor">Sponsorship</button>
+        <button class="nav-link" data-section="analytics">Analytics</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Casting Application -->
+    <section id="section-casting" class="section active">
+      <h2>Casting Application</h2>
+      <p class="section-intro">
+        Submit your profile, photos, and optional MP3 voice sample for AI-generated projects.
+      </p>
+
+      <form id="casting-form" class="card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="cast-name">Full Name *</label>
+            <input type="text" id="cast-name" name="name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="cast-email">Email *</label>
+            <input type="email" id="cast-email" name="email" required>
+          </div>
+
+          <div class="form-group">
+            <label for="cast-social">Social Handle</label>
+            <input type="text" id="cast-social" name="social" placeholder="@username">
+          </div>
+        </div>
+
+        <fieldset class="form-group">
+          <legend>Agreements *</legend>
+          <label class="checkbox">
+            <input type="checkbox" id="agree-voluntary" name="agree_voluntary" required>
+            <span>I understand this is a voluntary casting submission.</span>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="agree-usage" name="agree_usage" required>
+            <span>I agree to potential usage of my likeness in AI-generated content.</span>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="agree-data" name="agree_data" required>
+            <span>I consent to secure storage and processing of my data.</span>
+          </label>
+        </fieldset>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="cast-images">Photos (up to 6 images, max 5 MB each)</label>
+            <input type="file" id="cast-images" name="images" accept="image/*" multiple>
+            <div id="image-preview" class="preview-grid"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="cast-voice">Optional MP3 Voice Sample (max 10 MB)</label>
+            <input type="file" id="cast-voice" name="voice" accept="audio/mpeg,audio/mp3">
+            <audio id="voice-preview" controls class="hidden"></audio>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="casting-submit" class="btn primary">
+            Submit Application
+          </button>
+          <span id="casting-loading" class="loading hidden">Submitting...</span>
+        </div>
+
+        <div id="casting-message" class="feedback" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- Sponsorship Inquiry -->
+    <section id="section-sponsor" class="section">
+      <h2>Sponsorship Inquiry</h2>
+      <p class="section-intro">
+        Partner with AI Impact Media Studio on upcoming projects and campaigns.
+      </p>
+
+      <form id="sponsor-form" class="card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="sponsor-company">Company</label>
+            <input type="text" id="sponsor-company" name="company">
+          </div>
+
+          <div class="form-group">
+            <label for="sponsor-contact-name">Contact Name</label>
+            <input type="text" id="sponsor-contact-name" name="contactName">
+          </div>
+
+          <div class="form-group">
+            <label for="sponsor-contact-email">Contact Email *</label>
+            <input type="email" id="sponsor-contact-email" name="contactEmail" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="sponsor-message">Message</label>
+          <textarea id="sponsor-message" name="message" rows="4"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="sponsor-submit" class="btn primary">
+            Send Inquiry
+          </button>
+          <span id="sponsor-loading" class="loading hidden">Sending...</span>
+        </div>
+
+        <div id="sponsor-message-box" class="feedback" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- Analytics (Quick Stats) -->
+    <section id="section-analytics" class="section">
+      <h2>Analytics (Last 100 Events)</h2>
+      <p class="section-intro">
+        Lightweight dashboard powered by the backend analytics store.
+      </p>
+
+      <div class="card">
+        <button id="refresh-stats" class="btn secondary">Refresh Stats</button>
+        <span id="stats-loading" class="loading hidden">Loading...</span>
+
+        <div id="stats-error" class="feedback error"></div>
+
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody id="stats-body">
+            <tr><td>Total Events</td><td id="stat-totalEvents">0</td></tr>
+            <tr><td>Unique Sessions</td><td id="stat-uniqueSessions">0</td></tr>
+            <tr><td>Page Views</td><td id="stat-pageViews">0</td></tr>
+            <tr><td>Donation Clicks</td><td id="stat-donationClicks">0</td></tr>
+            <tr><td>Form Submissions</td><td id="stat-formSubmissions">0</td></tr>
+            <tr><td>Last Updated</td><td id="stat-lastUpdated">–</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© <span id="year"></span> AI Impact Media Studio · Built for static hosting + Node backend</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
