@@ -1,20 +1,1138 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Redirecting...</title>
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Impact Media Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&family=Cinzel:wght@700&family=Nosifer&family=Monoton&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #0ff0fc;
+            --neon-purple: #bc13fe;
+            --neon-pink: #ff00ff;
+            --neon-green: #00ff41;
+            --dark-bg: #050510;
+            --card-bg: rgba(16, 16, 32, 0.9);
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8d0;
+            --dynamic-color: #0ff0fc;
+        }
 
-    <!-- Fallback meta refresh -->
-    <meta http-equiv="refresh" content="0; url=https://script.google.com/macros/s/AKfycbzcnMI3G8KWZnfRrJfNsn0EScLkJH-rvJ2Ph-qWEBRjL9qgDb2M488JvgfuVKVPZ4V2/exec">
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            font-family: 'Exo 2', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* --- UTILITIES --- */
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.8s ease forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomEffect { from { transform: scale(1); } to { transform: scale(1.15); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 5px var(--neon-blue); } 50% { box-shadow: 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue); } }
+        @keyframes softPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+        /* --- MATRIX RAIN --- */
+        .matrix-rain {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; opacity: 0.1; /* Reduced opacity for softer effect */
+        }
+
+        /* --- 0. INTRO SEQUENCE --- */
+        #intro-sequence {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 1.5s ease; /* Slower transition for softer effect */
+        }
+        
+        .intro-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem; font-weight: 900; color: transparent;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple), var(--neon-pink));
+            -webkit-background-clip: text; background-clip: text;
+            opacity: 0; animation: introReveal 4s forwards; /* Slower animation */
+            text-align: center; padding: 20px; letter-spacing: 5px;
+        }
+
+        @keyframes introReveal {
+            0% { opacity: 0; letter-spacing: 20px; filter: blur(10px); transform: scale(0.8); }
+            50% { opacity: 1; letter-spacing: 5px; filter: blur(0px); transform: scale(1); }
+            70% { opacity: 1; letter-spacing: 5px; filter: blur(0px); transform: scale(1); }
+            100% { opacity: 1; letter-spacing: 5px; filter: blur(0px); transform: scale(1); }
+        }
+
+        /* --- 1. LANDING PAGE --- */
+        #landing-page {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; display: none; /* Hidden initially for intro */
+            flex-direction: column;
+            justify-content: flex-end; align-items: center;
+            padding-bottom: 50px; opacity: 0; transition: opacity 1.5s ease; /* Slower transition */
+        }
+
+        .poster-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
+            opacity: 0; z-index: -1;
+            /* Zoom effect is applied via JS adding 'active' class */
+        }
+        
+        .poster-bg.active {
+            opacity: 0.6;
+            animation: zoomEffect 8s ease-out forwards; /* Slower zoom for softer effect */
+        }
+        
+        .overlay-gradient {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(5,5,16,0.3) 0%, rgba(5,5,16,0.9) 80%, rgba(5,5,16,1) 100%);
+            z-index: 0;
+        }
+
+        .movie-title-display {
+            z-index: 2; font-size: 4rem; text-transform: uppercase;
+            text-align: center; margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            transition: all 0.8s ease; width: 100%; padding: 0 20px; /* Slower transition */
+            animation: softPulse 4s infinite; /* Added soft pulsing animation */
+        }
+
+        .landing-actions {
+            z-index: 2; display: flex; gap: 20px; flex-wrap: wrap;
+            justify-content: center; margin-bottom: 20px;
+        }
+
+        .action-card {
+            width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.5s ease; /* Slower transition */
+            text-decoration: none; color: white;
+            animation: float 6s ease-in-out infinite; /* Added floating animation */
+        }
+
+        .action-card:hover {
+            transform: translateY(-10px) scale(1.05); /* Added scale on hover */
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--dynamic-color);
+            box-shadow: 0 0 20px var(--dynamic-color);
+            animation: glow 2s infinite; /* Added glow animation on hover */
+        }
+
+        .action-card i { font-size: 2.5rem; margin-bottom: 10px; color: var(--dynamic-color); transition: color 1s ease; }
+        .action-card span { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; letter-spacing: 1px; }
+
+        /* --- 2. INTERNAL PAGES LAYOUT --- */
+        #internal-pages {
+            position: relative; z-index: 20; min-height: 100vh;
+            background: var(--dark-bg); display: none;
+        }
+
+        .nav-header {
+            position: fixed; top: 0; left: 0; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 40px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+            background: rgba(5, 5, 16, 0.95);
+            z-index: 100;
+            backdrop-filter: blur(10px); /* Added blur effect */
+        }
+
+        .home-btn {
+            background: transparent; border: 1px solid var(--neon-blue);
+            color: var(--neon-blue); padding: 8px 20px;
+            font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.5s; /* Slower transition */
+            border-radius: 4px;
+        }
+        .home-btn:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
+
+        /* Generic Page Section */
+        .page-section { 
+            display: none; width: 100%; min-height: 100vh;
+            padding-top: 80px; position: relative;
+        }
+        .page-section.active { display: block; animation: fadeIn 0.8s ease; } /* Slower fade in */
+
+        /* --- UPLOAD PREVIEW STYLES --- */
+        .upload-preview-container {
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .preview-item {
+            position: relative;
+            border: 1px solid var(--neon-blue);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .image-preview {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+        }
+
+        .audio-preview {
+            width: 200px;
+            padding: 10px;
+            background: rgba(10, 10, 25, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .audio-preview audio {
+            flex: 1;
+            height: 30px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 0, 0, 1);
+        }
+
+        /* --- MOVIE PAGE UPDATES --- */
+        .trailer-viewport {
+            width: 100%; height: 60vh;
+            position: relative; background: black;
+            border-bottom: 2px solid var(--neon-purple);
+            overflow: hidden; margin-bottom: 30px;
+        }
+
+        /* Video container inside viewport */
+        .trailer-video-container {
+            width: 100%; height: 100%; position: absolute; top:0; left:0;
+        }
+        
+        .trailer-video {
+            width: 100%; height: 100%; object-fit: cover;
+            position: absolute; top:0; left:0; opacity: 0; transition: opacity 1s ease;
+        }
+        .trailer-video.active { opacity: 1; }
+
+        .trailer-info { 
+            position: absolute; bottom: 40px; left: 40px; z-index: 4; 
+            display: flex; align-items: flex-end; gap: 20px;
+            text-shadow: 0 0 20px black;
+            background: linear-gradient(90deg, rgba(0,0,0,0.8), transparent);
+            padding: 20px; border-radius: 5px;
+        }
+        
+        .trailer-text h1 { 
+            font-family: 'Orbitron'; font-size: 3rem; line-height: 1; margin-bottom: 5px;
+            color: white;
+        }
+
+        /* NEW PLAY BUTTON (Polygon) */
+        .cyber-play-btn {
+            width: 60px; height: 60px;
+            background: var(--neon-blue);
+            clip-path: polygon(20% 0%, 100% 50%, 20% 100%);
+            cursor: pointer; transition: all 0.5s; /* Slower transition */
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+        
+        .cyber-play-btn:hover {
+            transform: scale(1.1);
+            background: #fff;
+            box-shadow: 0 0 25px var(--neon-blue);
+        }
+
+        .horizontal-scroll-container {
+            width: 100%; overflow-x: auto; white-space: nowrap; padding: 20px 20px;
+            scrollbar-width: thin; scrollbar-color: var(--neon-blue) var(--dark-bg);
+        }
+
+        .movie-thumb {
+            display: inline-block; width: 200px; height: 300px;
+            background: #222; margin-right: 20px; border-radius: 10px;
+            overflow: hidden; position: relative; cursor: pointer;
+            transition: 0.5s; border: 1px solid rgba(255,255,255,0.1); /* Slower transition */
+        }
+        .movie-thumb:hover { transform: scale(1.05); border-color: var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue); }
+        .movie-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .movie-thumb .title { 
+            position: absolute; bottom: 0; width: 100%; 
+            background: rgba(0,0,0,0.8); padding: 10px; 
+            white-space: normal; font-size: 0.9rem; text-align: center;
+        }
+
+        /* --- FORM & SLIDER STYLES (Shared) --- */
+        .bg-slider-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+        }
+        .bg-slide {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
+            opacity: 0; transition: opacity 2s ease-in-out; /* Slower transition */
+        }
+        .bg-slide.active { opacity: 0.4; }
+
+        .split-layout-container {
+            display: flex; flex-direction: row; height: 100%; width: 100%;
+            position: relative; z-index: 2;
+        }
+
+        .sidebar-text {
+            flex: 1; padding: 60px; display: flex; flex-direction: column; justify-content: center;
+            background: linear-gradient(90deg, rgba(5,5,16,0.9) 0%, rgba(5,5,16,0.2) 100%);
+        }
+
+        .form-wrapper {
+            flex: 1; padding: 40px; display: flex; align-items: center; justify-content: center;
+            background: rgba(16, 16, 32, 0.6); backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(0, 255, 255, 0.1);
+            overflow-y: auto;
+        }
+
+        .center-form-box {
+            width: 100%; max-width: 500px;
+            background: rgba(0,0,0,0.6); padding: 30px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .motivation-title {
+            font-family: 'Orbitron', sans-serif; font-size: 3.5rem; line-height: 1.1;
+            color: var(--neon-blue); margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(0,255,255,0.5);
+            opacity: 0; transform: translateY(20px); transition: all 1s ease; /* Slower transition */
+        }
+        .motivation-active { opacity: 1; transform: translateY(0); }
+
+        /* --- INPUTS --- */
+        .cyber-input {
+            width: 100%; padding: 15px; background: rgba(10, 10, 25, 0.6);
+            border: 1px solid rgba(0,255,255,0.3); color: white; margin-bottom: 15px;
+            font-family: 'Exo 2'; border-radius: 4px;
+            transition: all 0.5s; /* Added transition */
+        }
+        .cyber-input:focus { outline: none; border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(0,255,255,0.2); }
+        .cyber-input option { background: #000; color: white; }
+
+        .cyber-button {
+            padding: 15px 30px; background: rgba(0,255,255,0.1);
+            border: 1px solid var(--neon-blue); color: var(--neon-blue);
+            font-family: 'Orbitron'; cursor: pointer; width: 100%;
+            transition: 0.5s; text-transform: uppercase; font-weight: 700; letter-spacing: 2px;
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            border-radius: 4px; /* Added border radius */
+        }
+        .cyber-button:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 15px var(--neon-blue); transform: translateY(-2px); }
+        .cyber-button.pink { border-color: var(--neon-pink); color: var(--neon-pink); background: rgba(255,0,255,0.1); }
+        .cyber-button.pink:hover { background: var(--neon-pink); color: black; }
+
+        /* --- DONATION BUTTONS --- */
+        .donation-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .donation-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.5s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .donation-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .paypal-btn {
+            background: rgba(0, 112, 186, 0.1);
+            border: 1px solid #0070ba;
+            color: #0070ba;
+        }
+
+        .paypal-btn:hover {
+            background: #0070ba;
+            color: white;
+            box-shadow: 0 0 15px #0070ba;
+        }
+
+        .coffee-btn {
+            background: rgba(255, 221, 0, 0.1);
+            border: 1px solid #FFDD00;
+            color: #FFDD00;
+        }
+
+        .coffee-btn:hover {
+            background: #FFDD00;
+            color: black;
+            box-shadow: 0 0 15px #FFDD00;
+        }
+
+        /* --- RESPONSIVE ADJUSTMENTS --- */
+        @media (max-width: 900px) {
+            .intro-text { font-size: 1.8rem; }
+            .split-layout-container { flex-direction: column; }
+            .sidebar-text { padding: 40px 20px; min-height: 200px; background: rgba(5,5,16,0.8); }
+            .form-wrapper { padding: 20px; width: 100%; }
+            .motivation-title { font-size: 2rem; }
+            
+            /* Movie Page Mobile */
+            .trailer-viewport { height: 40vh; }
+            .trailer-info { left: 10px; bottom: 10px; }
+            .trailer-text h1 { font-size: 1.5rem; }
+            .cyber-play-btn { width: 40px; height: 40px; }
+            
+            /* Landing Mobile */
+            .movie-title-display { font-size: 2.5rem; }
+            
+            /* Donate/Sponsor Mobile */
+            .page-section { padding-top: 70px; }
+            
+            /* Upload previews mobile */
+            .audio-preview { width: 100%; }
+        }
+
+        @media (max-width: 480px) {
+            .action-card { width: 100px; height: 100px; }
+            .action-card i { font-size: 2rem; }
+            .movie-title-display { font-size: 2rem; }
+            .intro-text { font-size: 1.5rem; }
+        }
+
+        #statusConsole {
+            position: fixed; top: 70px; right: 20px; z-index: 200;
+            padding: 15px; background: rgba(0,0,0,0.95); border: 1px solid var(--neon-blue);
+            display: none; border-left: 5px solid var(--neon-blue);
+            border-radius: 4px;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    
+    <canvas class="matrix-rain" id="matrixCanvas"></canvas>
+    <div id="statusConsole"></div>
+
+    <div id="intro-sequence">
+        <h1 class="intro-text">AI IMPACT MEDIA STUDIO</h1>
+    </div>
+
+    <section id="landing-page">
+        <div class="overlay-gradient"></div>
+        
+        <div class="poster-bg active" style="background-image: url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1920');" data-title="NEON HORIZONS" data-font="'Orbitron', sans-serif" data-color="#0ff0fc"></div>
+        <div class="poster-bg" style="background-image: url('https://images.unsplash.com/photo-1514306191717-45224512c2d0?q=80&w=1920');" data-title="THE LAST KINGDOM" data-font="'Cinzel', serif" data-color="#ffcc00"></div>
+        <div class="poster-bg" style="background-image: url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=1920');" data-title="CYBER SOUL" data-font="'Monoton', cursive" data-color="#bc13fe"></div>
+        
+        <h1 class="movie-title-display" id="landingTitle">NEON HORIZONS</h1>
+
+        <div class="landing-actions">
+            <div class="action-card" onclick="navigateTo('castingForm')">
+                <i class="fas fa-users"></i><span>CASTING</span>
+            </div>
+            <div class="action-card" onclick="navigateTo('filmsSection')">
+                <i class="fas fa-film"></i><span>MOVIES</span>
+            </div>
+            <div class="action-card" onclick="navigateTo('sponsorForm')">
+                <i class="fas fa-handshake"></i><span>SPONSOR</span>
+            </div>
+            <div class="action-card" onclick="navigateTo('donateSection')">
+                <i class="fas fa-heart"></i><span>DONATE</span>
+            </div>
+        </div>
+    </section>
+
+    <div id="internal-pages">
+        <header class="nav-header">
+            <h2 style="font-family: 'Orbitron'; color: white; cursor:pointer;" onclick="goHome()">AI IMPACT MEDIA</h2>
+            <button class="home-btn" onclick="goHome()">HOME</button>
+        </header>
+
+        <section id="filmsSection" class="page-section">
+            <div class="trailer-viewport">
+                <div class="trailer-video-container">
+                    <video class="trailer-video active" muted playsinline id="vid1">
+                        <source src="https://videos.pexels.com/video-files/3129671/3129671-hd_1920_1080_30fps.mp4" type="video/mp4">
+                    </video>
+                    <video class="trailer-video" muted playsinline id="vid2">
+                        <source src="https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4" type="video/mp4">
+                    </video>
+                    <video class="trailer-video" muted playsinline id="vid3">
+                        <source src="https://videos.pexels.com/video-files/1851190/1851190-hd_1920_1080_25fps.mp4" type="video/mp4">
+                    </video>
+                </div>
+
+                <div class="trailer-info">
+                    <div class="trailer-text">
+                        <h1 id="movieTitleDisplay">NEON HORIZONS</h1>
+                        <p style="color: #ccc; font-size: 0.9rem;">PREVIEW MODE</p>
+                    </div>
+                    <div class="cyber-play-btn" onclick="playFullMovie()"></div>
+                </div>
+            </div>
+
+            <h3 style="font-family:'Orbitron'; color: var(--neon-blue); padding-left: 20px; margin-bottom: 10px;">PRODUCED FILMS</h3>
+            <div class="horizontal-scroll-container">
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=400"><div class="title">NEON HORIZONS</div></div>
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1514306191717-45224512c2d0?q=80&w=400"><div class="title">LAST KINGDOM</div></div>
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=400"><div class="title">CYBER SOUL</div></div>
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1596727147705-54a9d0820948?q=80&w=400"><div class="title">THE AWAKENING</div></div>
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=400"><div class="title">DIGITAL GHOSTS</div></div>
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?q=80&w=400"><div class="title">VOID RUNNER</div></div>
+                <div class="movie-thumb"><img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=400"><div class="title">SYNTHETIC HEART</div></div>
+            </div>
+        </section>
+
+        <section id="castingForm" class="page-section" style="padding:0;">
+            <div class="bg-slider-container">
+                <div class="bg-slide active casting-slide" style="background-image: url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1920');" data-text="JOIN THE RESISTANCE" data-sub="Become part of the digital revolution."></div>
+                <div class="bg-slide casting-slide" style="background-image: url('https://images.unsplash.com/photo-1515630278258-407f66498911?q=80&w=1920');" data-text="FUTURE IS NOW" data-sub="Your face, our next blockbuster."></div>
+            </div>
+
+            <div class="split-layout-container" style="padding-top: 60px;">
+                <div class="sidebar-text">
+                    <h1 id="castingMainTitle" class="motivation-title motivation-active">JOIN THE RESISTANCE</h1>
+                    <p id="castingSubTitle" style="color:white;">Become part of the digital revolution.</p>
+                </div>
+                <div class="form-wrapper">
+                    <div class="center-form-box">
+                        <h2 style="font-family:'Orbitron'; color: white; margin-bottom: 20px; text-align:center;">UPLOAD PROFILE</h2>
+                        <form id="submissionForm">
+                            <input type="text" id="name" class="cyber-input" placeholder="Full Name *" required>
+                            <input type="email" id="email" class="cyber-input" placeholder="Email *" required>
+                            <input type="text" id="location" class="cyber-input" placeholder="Location">
+                            
+                            <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                                <select id="socialType" class="cyber-input" style="flex:1;">
+                                    <option value="">Platform</option>
+                                    <option value="Instagram">Instagram</option>
+                                    <option value="TikTok">TikTok</option>
+                                    <option value="YouTube">YouTube</option>
+                                    <option value="Twitter/X">Twitter/X</option>
+                                </select>
+                                <input type="text" id="social" class="cyber-input" placeholder="@username" style="flex:1; margin-bottom:0;">
+                            </div>
+                            
+                            <label style="color:#ccc; font-size:0.8rem;">Upload Photos (Max 6)</label>
+                            <input type="file" id="photos" class="cyber-input" multiple accept="image/*">
+                            <div id="photoPreview" class="upload-preview-container"></div>
+                            
+                            <label style="color:#ccc; font-size:0.8rem;">Voice Sample (MP3 only)</label>
+                            <input type="file" id="voice" class="cyber-input" accept="audio/mp3,.mp3">
+                            <div id="audioPreview" class="upload-preview-container"></div>
+                            
+                            <div style="margin:15px 0; color:#aaa; font-size:0.7rem; background:rgba(0,0,0,0.4); padding:10px; border:1px solid #333;">
+                                <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:5px;">
+                                    <input type="checkbox" id="agree_voluntary" style="margin-top:3px;"> 
+                                    <span>I understand this is a voluntary project with no financial compensation.</span>
+                                </label>
+                                <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:5px;">
+                                    <input type="checkbox" id="agree_usage" style="margin-top:3px;"> 
+                                    <span>I grant AI Impact Media Studio the irrevocable, perpetual, worldwide right to use my likeness, voice, and submitted materials for the creation of AI-generated content, marketing, and distribution across all media platforms known now or hereafter devised.</span>
+                                </label>
+                                <label style="display:flex; align-items:flex-start; gap:10px;">
+                                    <input type="checkbox" id="agree_data" style="margin-top:3px;"> 
+                                    <span>I agree to the storage and processing of my personal data for casting purposes.</span>
+                                </label>
+                            </div>
+                            <input type="text" id="signature" class="cyber-input" placeholder="Digital Signature (Type Full Name) *" required>
+                            <button type="submit" class="cyber-button" id="submitBtn">SUBMIT PROFILE</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sponsorForm" class="page-section" style="padding:0;">
+            <div class="bg-slider-container">
+                <div class="bg-slide active sponsor-slide" style="background-image: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1920');"></div>
+                <div class="bg-slide sponsor-slide" style="background-image: url('https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1920');"></div>
+            </div>
+
+            <div class="split-layout-container" style="padding-top: 60px;">
+                <div class="sidebar-text">
+                    <h1 class="motivation-title motivation-active" style="color:var(--neon-pink);">POWER THE FUTURE</h1>
+                    <p style="color: white; font-size: 1.2rem;">Partner with the next generation of storytelling.</p>
+                </div>
+                <div class="form-wrapper">
+                    <div class="center-form-box" style="border-color: var(--neon-pink);">
+                        <h2 style="text-align:center; font-family:'Orbitron'; color:var(--neon-pink); margin-bottom:20px;">PARTNER WITH US</h2>
+                        <form id="sponsorFormElement">
+                            <input type="text" id="company" class="cyber-input" placeholder="Company Name" required>
+                            <input type="text" id="contactName" class="cyber-input" placeholder="Contact Name" required>
+                            <input type="email" id="contactEmail" class="cyber-input" placeholder="Contact Email" required>
+                            <textarea id="message" class="cyber-input" rows="5" placeholder="Tell us about your interest..."></textarea>
+                            <button type="submit" class="cyber-button pink" id="sponsorSubmitBtn">SEND PROPOSAL</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="donateSection" class="page-section" style="padding:0;">
+            <div class="bg-slider-container">
+                <div class="bg-slide active donate-slide" style="background-image: url('https://images.unsplash.com/photo-1639815188546-c43c240ff4df?q=80&w=1920');"></div>
+                <div class="bg-slide donate-slide" style="background-image: url('https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?q=80&w=1920');"></div>
+            </div>
+
+            <div class="split-layout-container" style="padding-top: 60px;">
+                <div class="sidebar-text">
+                    <h1 class="motivation-title motivation-active" style="color:var(--neon-green);">FUEL THE DREAM</h1>
+                    <p style="color: white; font-size: 1.2rem;">Every contribution pushes the boundaries of AI.</p>
+                </div>
+                <div class="form-wrapper">
+                    <div class="center-form-box" style="border-color: var(--neon-green); text-align:center;">
+                        <h2 style="font-family:'Orbitron'; color:var(--neon-green); margin-bottom:30px;">SUPPORT OUR WORK</h2>
+                        <p style="margin-bottom:30px; color:#ccc;">Your support helps us cover production costs and software licenses.</p>
+                        
+                        <div class="donation-buttons">
+                            <button onclick="openPayment('paypal')" class="donation-btn paypal-btn">
+                                <i class="fab fa-paypal"></i> DONATE VIA PAYPAL
+                            </button>
+                            
+                            <button onclick="openPayment('bmc')" class="donation-btn coffee-btn">
+                                <i class="fas fa-coffee"></i> BUY ME A COFFEE
+                            </button>
+                        </div>
+                        
+                        <p style="margin-top:20px; color:#888; font-size:0.8rem;">
+                            Opens in secure payment window
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script>
-      // Strong redirect for Instagram in-app browser
-      window.onload = function () {
-        window.location.href = "https://script.google.com/macros/s/AKfycbzcnMI3G8KWZnfRrJfNsn0EScLkJH-rvJ2Ph-qWEBRjL9qgDb2M488JvgfuVKVPZ4V2/exec";
-      };
+        // --- PERFORMANCE OPTIMIZATION ---
+        // Preload critical functions for faster execution
+        const performance = {
+            startTime: Date.now(),
+            pageViews: 0,
+            interactions: 0
+        };
+
+        // Fast navigation system
+        const fastNavigate = (sectionId) => {
+            performance.interactions++;
+            navigateTo(sectionId);
+        };
+
+        // --- ANALYTICS TRACKING ---
+        function trackEvent(category, action, label = '') {
+            try {
+                // Send to Google Apps Script for logging
+                google.script.run.withLogger().trackAnalyticsEvent({
+                    category: category,
+                    action: action,
+                    label: label,
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    page: window.location.href
+                });
+                
+                // Also log to console for debugging
+                console.log(`[Analytics] ${category} - ${action} - ${label}`);
+            } catch (e) {
+                // Silent fail - analytics shouldn't break the site
+                console.log('Analytics event:', category, action, label);
+            }
+        }
+
+        function trackPageView(sectionName) {
+            performance.pageViews++;
+            trackEvent('Navigation', 'Page View', sectionName);
+            
+            // Log performance metrics on first page view
+            if (performance.pageViews === 1) {
+                const loadTime = Date.now() - performance.startTime;
+                trackEvent('Performance', 'First Page Load', `${loadTime}ms`);
+            }
+        }
+
+        // --- MATRIX RAIN ---
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const drops = Array(Math.floor(canvas.width / 14)).fill(1);
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(5, 5, 16, 0.03)"; // Softer fade
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0ff0fc"; ctx.font = "14px monospace";
+            for(let i=0; i<drops.length; i++) {
+                const text = chars[Math.floor(Math.random()*chars.length)];
+                ctx.fillText(text, i*14, drops[i]*14);
+                if(drops[i]*14 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 50); // Slower matrix rain
+
+        // --- INTRO SEQUENCE LOGIC ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const intro = document.getElementById('intro-sequence');
+                const landing = document.getElementById('landing-page');
+                
+                intro.style.opacity = '0';
+                setTimeout(() => {
+                    intro.style.display = 'none';
+                    landing.style.display = 'flex';
+                    // Slight delay to trigger css transition
+                    setTimeout(() => { 
+                        landing.style.opacity = '1'; 
+                        startLandingLoop(); 
+                        trackEvent('Session', 'Site Loaded', 'Homepage');
+                    }, 50);
+                }, 1500); // Longer fade out
+            }, 4000); // 4 seconds intro
+        });
+
+        // --- DONATION POPUP FUNCTION ---
+        function openPayment(platform) {
+            const urls = {
+                paypal: 'https://www.paypal.me/AIImpactMedia',
+                bmc: 'https://buymeacoffee.com/aiimpactmedia'
+            };
+            
+            // Track donation click
+            trackEvent('Donation', 'Button Click', platform);
+            
+            // Open in centered popup for optimal UX
+            const width = 600;
+            const height = 700;
+            const left = (window.screen.width - width) / 2;
+            const top = (window.screen.height - height) / 2;
+            
+            const popup = window.open(
+                urls[platform], 
+                'payment', 
+                `width=${width},height=${height},scrollbars=yes,resizable=yes,top=${top},left=${left}`
+            );
+            
+            // Focus the popup and track if it opened successfully
+            if (popup) {
+                popup.focus();
+                trackEvent('Donation', 'Popup Opened', platform);
+            } else {
+                trackEvent('Donation', 'Popup Blocked', platform);
+                // Fallback: open in new tab
+                window.open(urls[platform], '_blank');
+            }
+        }
+
+        // --- LANDING LOGIC (ZOOM EFFECT) ---
+        const posters = document.querySelectorAll('.poster-bg');
+        const titleEl = document.getElementById('landingTitle');
+        const root = document.documentElement;
+        let currentPosterIndex = 0; let landingInterval;
+
+        function cycleLandingSlides() {
+            posters.forEach(p => p.classList.remove('active'));
+            currentPosterIndex = (currentPosterIndex + 1) % posters.length;
+            const nextPoster = posters[currentPosterIndex];
+            
+            // The class addition triggers the CSS animation
+            nextPoster.classList.add('active');
+            
+            titleEl.style.opacity = 0;
+            setTimeout(() => {
+                titleEl.textContent = nextPoster.dataset.title;
+                titleEl.style.fontFamily = nextPoster.dataset.font;
+                titleEl.style.color = nextPoster.dataset.color;
+                root.style.setProperty('--dynamic-color', nextPoster.dataset.color);
+                titleEl.style.opacity = 1;
+            }, 800); // Slower transition
+        }
+        function startLandingLoop() { 
+            if(landingInterval) clearInterval(landingInterval);
+            landingInterval = setInterval(cycleLandingSlides, 8000); // Longer interval for softer effect
+        }
+
+        // --- UPLOAD PREVIEW FUNCTIONALITY ---
+        let uploadedImages = [];
+        let uploadedAudio = null;
+
+        // Image upload preview with delete functionality
+        document.getElementById('photos').addEventListener('change', function(e) {
+            const files = Array.from(this.files);
+            if (files.length > 6) {
+                displayStatus("Maximum 6 images allowed", "error");
+                this.value = '';
+                return;
+            }
+            
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+            uploadedImages = [];
+            
+            files.forEach((file, index) => {
+                if (!file.type.match('image.*')) {
+                    displayStatus("Only image files are allowed", "error");
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'image-preview';
+                    
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '×';
+                    deleteBtn.onclick = function() {
+                        previewItem.remove();
+                        uploadedImages.splice(index, 1);
+                        // Update file input
+                        const dt = new DataTransfer();
+                        uploadedImages.forEach(file => dt.items.add(file));
+                        document.getElementById('photos').files = dt.files;
+                        trackEvent('Upload', 'Image Deleted', `Image ${index + 1}`);
+                    };
+                    
+                    previewItem.appendChild(img);
+                    previewItem.appendChild(deleteBtn);
+                    preview.appendChild(previewItem);
+                    
+                    uploadedImages.push(file);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            trackEvent('Upload', 'Images Added', `${files.length} images`);
+        });
+
+        // Audio upload preview with delete functionality (MP3 only)
+        document.getElementById('voice').addEventListener('change', function(e) {
+            const file = this.files[0];
+            if (!file) return;
+            
+            if (!file.type.match('audio/mp3') && !file.name.toLowerCase().endsWith('.mp3')) {
+                displayStatus("Only MP3 audio files are allowed", "error");
+                this.value = '';
+                trackEvent('Upload', 'Invalid Audio Format', file.type);
+                return;
+            }
+            
+            const preview = document.getElementById('audioPreview');
+            preview.innerHTML = '';
+            
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = URL.createObjectURL(file);
+            
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item audio-preview';
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.onclick = function() {
+                previewItem.remove();
+                uploadedAudio = null;
+                document.getElementById('voice').value = '';
+                trackEvent('Upload', 'Audio Deleted', 'Voice sample');
+            };
+            
+            previewItem.appendChild(audio);
+            previewItem.appendChild(deleteBtn);
+            preview.appendChild(previewItem);
+            
+            uploadedAudio = file;
+            trackEvent('Upload', 'Audio Added', 'MP3 voice sample');
+        });
+
+        // --- GENERIC BACKGROUND LOOPS (Casting, Sponsor, Donate) ---
+        let bgIntervals = {};
+
+        function startBgLoop(className, intervalTime) {
+            const slides = document.querySelectorAll('.' + className);
+            if(slides.length === 0) return;
+            let index = 0;
+            const id = setInterval(() => {
+                slides.forEach(s => s.classList.remove('active'));
+                index = (index + 1) % slides.length;
+                slides[index].classList.add('active');
+                
+                if(className === 'casting-slide') {
+                    const title = document.getElementById('castingMainTitle');
+                    const sub = document.getElementById('castingSubTitle');
+                    if(title && sub) {
+                        title.classList.remove('motivation-active');
+                        setTimeout(() => {
+                            title.textContent = slides[index].dataset.text;
+                            sub.textContent = slides[index].dataset.sub;
+                            title.classList.add('motivation-active');
+                        }, 500);
+                    }
+                }
+            }, intervalTime);
+            bgIntervals[className] = id;
+        }
+
+        function stopBgLoops() {
+            for (let key in bgIntervals) clearInterval(bgIntervals[key]);
+            bgIntervals = {};
+        }
+
+        // --- MOVIE VIDEO PLAYLIST LOGIC ---
+        const videoTitles = ["NEON HORIZONS", "LAST KINGDOM", "CYBER SOUL"];
+        const videos = document.querySelectorAll('.trailer-video');
+        const movieTitleDisplay = document.getElementById('movieTitleDisplay');
+        let currentVideoIndex = 0;
+        let videoTimer;
+
+        function playCurrentVideo() {
+            // Hide all
+            videos.forEach(v => {
+                v.classList.remove('active');
+                v.pause();
+                v.currentTime = 0;
+            });
+
+            // Show current
+            const vid = videos[currentVideoIndex];
+            vid.classList.add('active');
+            vid.play().catch(e => console.log("Autoplay prevented"));
+            
+            // Update Title
+            movieTitleDisplay.textContent = videoTitles[currentVideoIndex];
+
+            // Set 10s timer for next video
+            clearTimeout(videoTimer);
+            videoTimer = setTimeout(() => {
+                currentVideoIndex = (currentVideoIndex + 1) % videos.length;
+                playCurrentVideo();
+            }, 10000); // 10 seconds
+        }
+
+        function startVideoLoop() {
+            currentVideoIndex = 0;
+            playCurrentVideo();
+        }
+
+        function stopVideoLoop() {
+            clearTimeout(videoTimer);
+            videos.forEach(v => {
+                v.classList.remove('active');
+                v.pause();
+            });
+        }
+
+        function playFullMovie() {
+            const currentTitle = videoTitles[currentVideoIndex];
+            trackEvent('Media', 'Play Full Movie', currentTitle);
+            alert(`Launching full experience for: ${currentTitle}`);
+            // In real app: window.location.href = "/watch/" + currentTitle;
+        }
+
+        // --- FAST NAVIGATION ---
+        function navigateTo(sectionId) {
+            clearInterval(landingInterval);
+            document.getElementById('landing-page').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('landing-page').style.display = 'none';
+                document.getElementById('internal-pages').style.display = 'block';
+                document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+
+                // Track page view
+                trackPageView(sectionId);
+
+                // Manage Background/Video Loops
+                stopBgLoops();
+                stopVideoLoop(); // Stop videos if leaving movies
+
+                if(sectionId === 'castingForm') startBgLoop('casting-slide', 6000); // Slower transitions
+                if(sectionId === 'sponsorForm') startBgLoop('sponsor-slide', 7000);
+                if(sectionId === 'donateSection') startBgLoop('donate-slide', 7000);
+                if(sectionId === 'filmsSection') startVideoLoop(); // Start Video Logic
+
+            }, 300); // FASTER transition for better performance
+        }
+
+        function goHome() {
+            trackEvent('Navigation', 'Home Click', 'Header button');
+            stopBgLoops();
+            stopVideoLoop();
+            document.getElementById('internal-pages').style.display = 'none';
+            const landing = document.getElementById('landing-page');
+            landing.style.display = 'flex';
+            setTimeout(() => landing.style.opacity = '1', 50);
+            startLandingLoop();
+            trackPageView('home');
+        }
+
+        // --- FORM SUBMISSION ---
+        function displayStatus(msg, type) {
+            const el = document.getElementById('statusConsole');
+            el.textContent = msg; el.style.display = 'block';
+            el.style.borderColor = type==='error'?'red':'#0ff0fc';
+            el.style.color = type==='error'?'red':'#0ff0fc';
+            setTimeout(() => el.style.display='none', 5000);
+        }
+
+        function filesToBase64(fileList) {
+            const promises = Array.from(fileList).map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve({ name: file.name, mimeType: file.type, data: e.target.result });
+                    reader.readAsDataURL(file);
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        document.getElementById('submissionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            
+            // 1. Validation
+            if(!document.getElementById('agree_voluntary').checked || 
+               !document.getElementById('agree_usage').checked || 
+               !document.getElementById('agree_data').checked) {
+                displayStatus("ERROR: You must agree to all terms.", "error");
+                return;
+            }
+
+            // 2. Temporary "Processing" state (only while reading files locally)
+            btn.disabled = true; 
+            btn.innerText = "PROCESSING...";
+            
+            try {
+                // Prepare files (Client-side operation - fast)
+                const photos = document.getElementById('photos').files;
+                const voice = document.getElementById('voice').files;
+                const imageFiles = await filesToBase64(photos);
+                const voiceFiles = await filesToBase64(voice);
+
+                const formData = {
+                    name: document.getElementById('name').value,
+                    email: document.getElementById('email').value,
+                    location: document.getElementById('location').value,
+                    social: document.getElementById('social').value,
+                    socialType: document.getElementById('socialType').value,
+                    signature: document.getElementById('signature').value,
+                    agree_voluntary: document.getElementById('agree_voluntary').checked,
+                    agree_usage: document.getElementById('agree_usage').checked,
+                    agree_data: document.getElementById('agree_data').checked,
+                    images: imageFiles,
+                    voice: voiceFiles[0]
+                };
+
+                // --- KEY CHANGE: IMMEDIATE SUCCESS FEEDBACK ---
+                
+                // 3. Show Success Message Immediately
+                displayStatus("SUCCESS: Profile Submitted", "success");
+                
+                // 4. Reset Form Immediately (Don't wait for backend)
+                e.target.reset(); 
+                document.getElementById('photoPreview').innerHTML='';
+                document.getElementById('audioPreview').innerHTML='';
+                uploadedImages = [];
+                uploadedAudio = null;
+                btn.disabled = false; 
+                btn.innerText = "SUBMIT PROFILE";
+                
+                // 5. Send to Backend in Background (Fire and Forget)
+                google.script.run
+                    .withFailureHandler((err) => {
+                        // Only log to console so the user experience isn't interrupted
+                        console.error("Background Upload Failed:", err);
+                    })
+                    .processCastingSubmission(formData);
+
+            } catch (err) { 
+                console.error(err); 
+                btn.disabled=false;
+                displayStatus("Client Error: " + err.toString(), "error");
+            }
+        });
+
+        document.getElementById('sponsorFormElement').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('sponsorSubmitBtn');
+            btn.innerText = "SENDING...";
+            trackEvent('Form', 'Submission Started', 'Sponsor Form');
+            
+            const formData = {
+                company: document.getElementById('company').value,
+                contactName: document.getElementById('contactName').value,
+                contactEmail: document.getElementById('contactEmail').value,
+                message: document.getElementById('message').value
+            };
+
+            google.script.run
+                .withSuccessHandler(() => {
+                    displayStatus("PROPOSAL SENT", "success");
+                    e.target.reset(); btn.innerText = "SEND PROPOSAL";
+                    trackEvent('Form', 'Submission Success', 'Sponsor Form');
+                })
+                .withFailureHandler((err) => {
+                    displayStatus("ERROR: "+err, "error");
+                    btn.innerText = "SEND PROPOSAL";
+                    trackEvent('Form', 'Submission Failed', err.toString());
+                })
+                .processSponsorInquiry(formData);
+        });
+
+        // --- FAST ACTION CARDS ---
+        document.querySelectorAll('.action-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const action = this.querySelector('span').textContent;
+                trackEvent('Navigation', 'Action Card Click', action);
+            });
+        });
+
+        // Track initial performance
+        window.addEventListener('load', () => {
+            const loadTime = Date.now() - performance.startTime;
+            trackEvent('Performance', 'Full Load Complete', `${loadTime}ms`);
+        });
     </script>
-  </head>
-  <body>
-    <p>Redirecting…</p>
-  </body>
+</body>
 </html>
