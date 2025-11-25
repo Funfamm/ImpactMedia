@@ -1,7 +1,7 @@
 // Frontend logic for AI Impact Media Studio
 // Replaces google.script.run with fetch() calls to Node/Express backend.
 
-const API_BASE = 'https://your-backend-host.com'; // TODO: set to real backend origin
+const API_BASE = 'https://funfamm.github.io/ImpactMedia/'; // TODO: set to real backend origin
 
 // ---- DOM helpers ----
 const $ = (sel) => document.querySelector(sel);
