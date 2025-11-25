@@ -1,0 +1,11 @@
+{
+  "PORT": 4000,
+  "FRONTEND_ORIGIN": "https://<Funfamm>.github.io",
+  "SMTP_HOST": "smtp.example.com",
+  "SMTP_PORT": 587,
+  "SMTP_SECURE": false,
+  "SMTP_USER": "user@example.com",
+  "SMTP_PASS": "password",
+  "ADMIN_EMAIL": "ai.impactmediastudio@gmail.com",
+  "SENDER_NAME": "AI Impact Media Studio Admin"
+}
