@@ -1,7 +1,7 @@
 {
   "name": "ai-impact-media-backend",
-  "version": "1.0.0",
-  "description": "Node/Express backend for AI Impact Media Studio (migrated from Google Apps Script)",
+  "version": "1.1.0",
+  "description": "Node/Express backend for AI Impact Media Studio with SQLite analytics",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,6 +11,7 @@
     "express": "^4.19.2",
     "morgan": "^1.10.0",
     "nodemailer": "^6.9.13",
+    "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"
   }
 }
